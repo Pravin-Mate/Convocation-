@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MGM University - Convocation Reporting, Attendance & Live Stage Display System</title>
+
+  <!-- Favicon / Tab Logo -->
+  <link rel="icon" type="image/png" href="/assets/images/LogoMGM.png">
+  <link rel="shortcut icon" type="image/png" href="/assets/images/LogoMGM.png">
+  <link rel="apple-touch-icon" href="/assets/images/LogoMGM.png">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="/css/styles.css">
+
+  <!-- Client Libraries -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+
+<body>
+
+  <!-- Top Application Navbar -->
+  <header class="app-navbar">
+    <div class="brand-badge pr-3" onclick="window.app.switchView('dashboard')">
+      <div class="brand-info">
+        <div class="brand-crest">
+          <img src="/assets/images/LogoMGM.svg" alt="MGM University Logo" class="brand-crest-img">
+        </div>
+        <p class="brand-event-title">Convocation Ceremony 2026</p>
+      </div>
+    </div>
+
+    <!-- Navigation Bar Links (Role-Aware) -->
+    <nav class="nav-links" id="main-nav-links">
+      <button class="nav-btn active" data-view="dashboard"
+        data-roles="ADMIN,REPORTING,HELPDESK,PRESTAGE,STAGECONTROL">📊 Dashboard</button>
+      <button class="nav-btn" data-view="reporting" data-roles="ADMIN,REPORTING">📷 Reporting Desk</button>
+      <button class="nav-btn" data-view="helpdesk" data-roles="ADMIN,HELPDESK">🔍 Help Desk</button>
+      <button class="nav-btn" data-view="prestage" data-roles="ADMIN,PRESTAGE">🚶 Pre-Stage Lineup</button>
+      <button class="nav-btn" data-view="stagecontrol" data-roles="ADMIN,STAGECONTROL">🎬 Stage Controller</button>
+      <button class="nav-btn" data-view="passes" data-roles="ADMIN">🖨️ QR Pass Studio</button>
+      <button class="nav-btn" data-view="admin" data-roles="ADMIN">⚙️ Admin & Security</button>
+      <button class="nav-btn" data-view="display"
+        style="background: rgba(212, 175, 55, 0.2); border-color: var(--gold); color: var(--gold-light);">
+        🖥️ Public Stage LED
+      </button>
+    </nav>
+
+    <!-- User / Role Status Pill -->
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <div class="user-status-pill" onclick="document.getElementById('role-switcher-modal').style.display='flex'"
+        style="cursor: pointer;" title="Click to Switch Operator Station">
+        <div id="connection-status" class="pulse-dot"></div>
+        <div>
+          <div id="current-user-role" class="role-tag">ADMIN</div>
+        </div>
+        <span style="font-size: 0.75rem; color: var(--text-secondary);">⇄ Switch Station</span>
+      </div>
+      <button class="btn btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;"
+        onclick="window.app.logout()">
+        🚪 Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="main-container">
+
+    <!-- ========================================================= -->
+    <!-- 1. LIVE OPERATIONAL DASHBOARD                             -->
+    <!-- ========================================================= -->
+    <section id="view-dashboard" class="view-section active">
+      <!-- High-Level Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card gold">
+          <div class="metric-title">Total Registered</div>
+          <div id="dash-total-registered" class="metric-val">100</div>
+          <div class="metric-sub">Active Convocation Master</div>
+        </div>
+
+        <div class="metric-card emerald">
+          <div class="metric-title">Reported & Present</div>
+          <div id="dash-total-reported" class="metric-val" style="color: #34d399;">0</div>
+          <div id="dash-reported-pct" class="metric-sub" style="color: #10b981; font-weight: 700;">0.0% Reported</div>
+        </div>
+
+        <div class="metric-card rose">
+          <div class="metric-title">Yet to Report (Absent)</div>
+          <div id="dash-total-absent" class="metric-val" style="color: #fb7185;">100</div>
+          <div class="metric-sub">Pending at Front Counters</div>
+        </div>
+
+        <div class="metric-card amber">
+          <div class="metric-title">Late Arrivals</div>
+          <div id="dash-total-late" class="metric-val" style="color: #fbbf24;">0</div>
+          <div class="metric-sub">Scanned after cutoff</div>
+        </div>
+
+        <div class="metric-card blue">
+          <div class="metric-title">Pre-Stage Lineup</div>
+          <div id="dash-total-queued" class="metric-val" style="color: #93c5fd;">0</div>
+          <div class="metric-sub">Standing at stage ramp</div>
+        </div>
+
+        <div class="metric-card purple">
+          <div class="metric-title">Conferred on Stage</div>
+          <div id="dash-total-conferred" class="metric-val" style="color: #c084fc;">0</div>
+          <div class="metric-sub">Degrees Presented</div>
+        </div>
+      </div>
+
+      <!-- Quick Export Center & School Breakdown -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+        <!-- School Breakdown Table -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">🏫 Attendance by MGM University Institute</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>Institute / School</th>
+                  <th>Registered</th>
+                  <th>Reported</th>
+                  <th>Late</th>
+                  <th>Conferred</th>
+                  <th>Progress</th>
+                </tr>
+              </thead>
+              <tbody id="dash-school-tbody">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Official Report Export Center -->
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-header">
+              <h2 class="card-title">📥 Official Convocation Reports</h2>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+              Download certified reconciliation reports formatted for University Administration.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600;">1. Master Registered List</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('registered', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('registered', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #34d399;">2. Reported / Present</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('reported', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('reported', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #fb7185;">3. Absent / Unreported</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('absent', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('absent', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #d4af37;">4. Conferred on Stage</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('conferred', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('conferred', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #c084fc;">5. Reported Not Conferred</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('reported-not-conferred', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('reported-not-conferred', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #fbbf24;">6. Exceptions & Audit Log</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('exceptions', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('exceptions', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Audit Feed -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <h2 class="card-title">⚡ Live Ceremony Event & Audit Stream</h2>
+        </div>
+        <div id="dash-activity-feed">
+          <!-- Dynamic activity rows -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 2. REPORTING DESK PORTAL                                  -->
+    <!-- ========================================================= -->
+    <section id="view-reporting" class="view-section">
+      <div class="scanner-hero">
+        <!-- Giant Scan Box Card -->
+        <div class="scan-input-card focused">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="role-tag" style="background: var(--gold); color: #000;">HIGH-SPEED SCANNER</span>
+              <button class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.78rem;"
+                onclick="window.reportingController.toggleCameraScanner()">
+                📷 Camera QR Scan
+              </button>
+            </div>
+
+            <h2 style="font-size: 1.75rem; font-weight: 800; color: #fff; margin: 0.75rem 0 0.25rem 0;">
+              Student Reporting Counter
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+              Keep cursor in the scan box. Gun automatically presses Enter upon scanning.
+            </p>
+
+            <div id="reporting-camera-box"
+              style="display: none; margin: 1rem 0; width: 100%; max-height: 250px; background: #000; border-radius: 8px; overflow: hidden;">
+            </div>
+
+            <input type="text" id="reporting-scan-input" class="giant-scan-input"
+              placeholder="SCAN QR PASS OR ENTER PRN..." autofocus autocomplete="off">
+
+            <div style="display: flex; gap: 0.75rem;">
+              <button class="btn btn-primary" style="flex: 1;"
+                onclick="window.reportingController.processScan(document.getElementById('reporting-scan-input').value)">
+                ⚡ Verify & Submit
+              </button>
+              <button class="btn btn-secondary"
+                onclick="document.getElementById('reporting-scan-input').value=''; window.reportingController.focusInput()">
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div
+            style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem; font-size: 0.82rem; color: #94a3b8;">
+            💡 <em>Rule: Duplicate scans generate instant audio warning and do not increment counters.</em>
+          </div>
+        </div>
+
+        <!-- Student Verification Preview Card -->
+        <div id="reporting-student-card" class="student-preview-card">
+          <!-- Student Card or Placeholder -->
+        </div>
+      </div>
+
+      <!-- Recent Scans at This Desk -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <h3 class="card-title">📋 Recent Scans at this Counter</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Student Name</th>
+                <th>PRN / ID</th>
+                <th>Sequence #</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="reporting-recent-scans-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 3. HELP DESK & MANUAL RESOLUTION                          -->
+    <!-- ========================================================= -->
+    <section id="view-helpdesk" class="view-section">
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <h2 class="card-title">🔍 Help Desk Student Search & Manual Verification</h2>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;">
+          Search by PRN / Roll No, Student Name, or Mobile to manually verify attendance for damaged or lost QR passes.
+        </p>
+
+        <div style="display: flex; gap: 0.75rem;">
+          <input type="text" id="helpdesk-search-input" class="form-control"
+            style="font-size: 1.1rem; padding: 0.85rem 1.2rem;" placeholder="Type PRN, Student Name, or Phone...">
+          <button id="helpdesk-search-btn" class="btn btn-primary" style="padding: 0 1.75rem;">Search</button>
+        </div>
+      </div>
+
+      <div id="helpdesk-results-container" class="card">
+        <div style="text-align: center; padding: 3rem; color: #64748b;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+          <p>Enter student details above to search master records.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 4. PRE-STAGE LINEUP SCANNER                               -->
+    <!-- ========================================================= -->
+    <section id="view-prestage" class="view-section">
+      <div class="card" style="margin-bottom: 1.5rem; border-color: #3b82f6;">
+        <div class="card-header">
+          <h2 class="card-title">🚶 Pre-Stage Lineup Marshal Scanner (3–5 Students Before Stage)</h2>
+          <span class="role-tag" style="background: #3b82f6; color: #fff;">RAMP VERIFICATION</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1rem;">
+          Scan student passes as they assemble in the stage lineup. The system verifies attendance status and flags
+          out-of-order sequence gaps.
+        </p>
+
+        <input type="text" id="prestage-scan-input" class="giant-scan-input" placeholder="SCAN PRE-STAGE PASS OR PRN..."
+          style="border-color: #3b82f6;" autocomplete="off">
+
+        <div id="prestage-result-banner" style="margin-top: 1rem;"></div>
+      </div>
+
+      <!-- Live Stage Queue Buffer -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">👥 Students Currently Queued for Stage</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Queue Pos</th>
+                <th>Convocation Seq #</th>
+                <th>PRN / ID</th>
+                <th>Student Name</th>
+                <th>Programme & Degree</th>
+              </tr>
+            </thead>
+            <tbody id="prestage-queue-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 5. STAGE CONTROLLER MASTER BACKSTAGE                      -->
+    <!-- ========================================================= -->
+    <section id="view-stagecontrol" class="view-section">
+      <!-- Top Action Ribbon -->
+      <div class="card" style="margin-bottom: 1.5rem; background: #0c1220; border: 2px solid var(--gold);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <span class="role-tag" style="background: var(--gold); color: #000; font-weight: 800;">STAGE MASTER
+              CONTROLLER</span>
+            <span id="stage-led-status-pill" class="role-tag"
+              style="margin-left: 0.5rem; background: rgba(212,175,55,0.2); border: 1px solid var(--gold); color: #fef08a;">
+              ● LIVE: UNIVERSITY HOLDING SCREEN
+            </span>
+          </div>
+
+          <!-- Master Control Action Buttons with Hotkeys -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn btn-giant btn-primary" onclick="window.stageController.displayNext()">
+              ▶ DISPLAY NEXT <span class="hotkey-badge">SPACE</span>
+            </button>
+            <button class="btn btn-danger" style="padding: 0.85rem 1.5rem; font-weight: 800;"
+              onclick="window.stageController.emergencyHold()">
+              ⏹ HOLD / HOME <span class="hotkey-badge">H</span>
+            </button>
+            <button class="btn btn-secondary" style="padding: 0.85rem 1.25rem;"
+              onclick="window.stageController.openSkipModal()">
+              ⏭ SKIP <span class="hotkey-badge">S</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3-Column Stage Pipeline (CURRENT / NEXT / AFTER NEXT) -->
+      <div class="stage-control-grid">
+        <div id="stage-current-box" class="stage-box current">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div id="stage-next-box" class="stage-box">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div id="stage-after-next-box" class="stage-box">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Upcoming Stage Queue Table -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <h3 class="card-title">⏳ Waiting Stage Lineup (Next in Queue)</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Queue #</th>
+                <th>Convocation Seq #</th>
+                <th>Student Name</th>
+                <th>Degree & Discipline</th>
+              </tr>
+            </thead>
+            <tbody id="stage-full-queue-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 6. QR PASS STUDIO & BATCH PRINT                           -->
+    <!-- ========================================================= -->
+    <section id="view-passes" class="view-section">
+      <div class="card no-print" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <h2 class="card-title">🖨️ Official MGM University QR Pass Studio</h2>
+          <div>
+            <button class="btn btn-primary" onclick="window.adminController.printAllPasses()">
+              🖨️ Print All Passes (A4 Layout)
+            </button>
+          </div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem;">
+          Clean, printable student passes featuring opaque security QR codes, student details, and convocation sequence
+          badges.
+        </p>
+      </div>
+
+      <div id="printable-passes-grid" class="passes-grid">
+        <!-- Passes rendered here -->
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 7. ADMIN, SECURITY & BACKUP MANAGEMENT                    -->
+    <!-- ========================================================= -->
+    <section id="view-admin" class="view-section">
+      <!-- Admin Sub-Navigation -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <button class="btn btn-secondary active" id="tab-btn-master"
+          onclick="window.adminController.switchAdminTab('master')">🎓 Student Master</button>
+        <button class="btn btn-secondary" id="tab-btn-users" onclick="window.adminController.switchAdminTab('users')">👥
+          Operator Accounts</button>
+        <button class="btn btn-secondary" id="tab-btn-backup"
+          onclick="window.adminController.switchAdminTab('backup')">💾 Backup & Recovery</button>
+        <button class="btn btn-secondary" id="tab-btn-settings"
+          onclick="window.adminController.switchAdminTab('settings')">⚙️ Branding & Config</button>
+      </div>
+
+      <!-- Tab 1: Student Master Data & Import -->
+      <div id="admin-tab-master" class="admin-tab-pane">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📥 Import Student Master Data</h3>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+              Upload CSV or Excel file with PRN, Student Name, School, Degree, Sequence No, and Medals.
+            </p>
+            <div class="form-group">
+              <input type="file" id="admin-csv-file" class="form-control" accept=".csv, .xlsx, .xls">
+            </div>
+            <div id="admin-import-preview"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📄 Emergency Fallback Generation</h3>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+              Print emergency paper fallback sheets (required per Section 13 of brief).
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <button class="btn btn-secondary" onclick="window.adminController.printFallbackList('sequence')">
+                🖨️ Print Master Stage Sequence Register
+              </button>
+              <button class="btn btn-secondary" onclick="window.adminController.printFallbackList('attendance')">
+                🖨️ Print Emergency Attendance Sign-in Sheets
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🎓 Student Master Database (100 Active Records)</h3>
+          </div>
+          <div class="table-responsive" style="max-height: 450px;">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>Seq #</th>
+                  <th>PRN / ID</th>
+                  <th>Student Name</th>
+                  <th>Institute / College</th>
+                  <th>Degree & Discipline</th>
+                  <th>Status</th>
+                  <th>Opaque Token</th>
+                </tr>
+              </thead>
+              <tbody id="admin-students-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Operator User Accounts & Access Control -->
+      <div id="admin-tab-users" class="admin-tab-pane" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">➕ Add Operator Station Account</h3>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input type="text" id="new-user-username" class="form-control" placeholder="e.g. desk4">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Operator Full Name</label>
+              <input type="text" id="new-user-fullname" class="form-control" placeholder="e.g. Rajesh Patil">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Role Privilege</label>
+              <select id="new-user-role" class="form-control">
+                <option value="REPORTING">REPORTING (Desk Scanner)</option>
+                <option value="HELPDESK">HELPDESK (Manual Resolution)</option>
+                <option value="PRESTAGE">PRESTAGE (Lineup Marshal)</option>
+                <option value="STAGECONTROL">STAGECONTROL (Stage Master)</option>
+                <option value="ADMIN">ADMIN (Full Convener Access)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Station / Desk ID</label>
+              <input type="text" id="new-user-deskid" class="form-control" placeholder="e.g. DESK-04">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Initial Password</label>
+              <input type="password" id="new-user-password" class="form-control" value="mgm2026">
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="window.adminController.createUser()">
+              Create Operator Account
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">👥 Active Operator Accounts & Roles</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Desk ID</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-tbody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Backup & Disaster Recovery -->
+      <div id="admin-tab-backup" class="admin-tab-pane" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+          <div class="card" style="border-color: #10b981;">
+            <div class="card-header">
+              <h3 class="card-title" style="color: #34d399;">💾 Live Database Snapshot Download</h3>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;">
+              Download a zero-lock binary snapshot of the entire SQLite database (`convocation.db`) with all reporting
+              and stage attendance logs.
+            </p>
+            <button class="btn btn-success" onclick="window.location.href='/api/admin/backup/download'">
+              📥 Download Live Database Snapshot (.db)
+            </button>
+          </div>
+
+          <div class="card" style="border-color: #3b82f6;">
+            <div class="card-header">
+              <h3 class="card-title" style="color: #93c5fd;">🔄 Restore Database from Snapshot</h3>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1rem;">
+              Upload a previously exported `.db` backup file to instantly restore complete system state (Safety backup
+              created automatically before restore).
+            </p>
+            <div class="form-group">
+              <input type="file" id="admin-restore-file" class="form-control" accept=".db, .sqlite">
+            </div>
+            <button class="btn btn-primary" onclick="window.adminController.restoreDatabase()">
+              Restore Database from File
+            </button>
+          </div>
+        </div>
+
+        <!-- Rehearsal Reset Control -->
+        <div class="card" style="border-color: #f43f5e; background: #1c0f16;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: #fb7185;">🔄 Rehearsal & Live Reset Controls</h3>
+          </div>
+          <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 1rem;">
+            Reset all reporting records and stage queue events before the real ceremony begins. Student master database
+            and QR tokens are safely preserved.
+          </p>
+          <button class="btn btn-danger" onclick="window.adminController.resetCeremony()">
+            ⚠️ Reset All Ceremony Transactions for Fresh Rehearsal
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Branding & Event Settings -->
+      <div id="admin-tab-settings" class="admin-tab-pane" style="display: none;">
+        <div class="card" style="max-width: 700px;">
+          <div class="card-header">
+            <h3 class="card-title">⚙️ MGM University Convocation Configuration</h3>
+          </div>
+          <div class="form-group">
+            <label class="form-label">University / Institution Name</label>
+            <input type="text" id="setting-univ-name" class="form-control" value="MGM UNIVERSITY">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Convocation Title</label>
+            <input type="text" id="setting-event-title" class="form-control" value="Convocation Ceremony 2026">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Reporting Cutoff (Late Flag)</label>
+              <input type="time" id="setting-cutoff-time" class="form-control" value="09:30">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Auditorium / Venue</label>
+              <input type="text" id="setting-venue-name" class="form-control"
+                value="Rukmini Auditorium, MGM University">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Holding Screen Main Header</label>
+            <input type="text" id="setting-holding-title" class="form-control" value="MGM UNIVERSITY CONVOCATION 2026">
+          </div>
+          <button class="btn btn-primary" onclick="window.adminController.saveSettings()">Save Configuration</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 8. 16:9 LIVE PUBLIC STAGE LED DISPLAY (/display)          -->
+    <!-- ========================================================= -->
+    <section id="view-display" class="view-section">
+      <!-- Rendered dynamically by display.js -->
+    </section>
+
+  </main>
+
+  <!-- Help Desk Modal Overlay -->
+  <div id="helpdesk-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+  </div>
+
+  <!-- Role Switcher Modal -->
+  <div id="role-switcher-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;"
+    onclick="if(event.target === this) this.style.display='none'">
+    <div class="card"
+      style="max-width: 550px; width: 90%; background: #131b2e; border: 2px solid var(--gold); border-radius: 16px; padding: 2rem;">
+      <div class="card-header">
+        <h3 class="card-title">⇄ Quick Operator Counter Switcher</h3>
+        <button style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">&times;</button>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+        Select an operator station to test simultaneous scanning, pre-stage lineup, stage master controls, or admin
+        analytics.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+        <button class="btn btn-secondary role-switch-btn" data-role="ADMIN" data-username="admin"
+          data-fullname="Prof. Dr. V.M. Patil (Dean / Convener)"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">
+          👑 Admin / Convener Dashboard
+        </button>
+        <button class="btn btn-secondary role-switch-btn" data-role="REPORTING" data-username="desk1"
+          data-desk="DESK-01" data-fullname="Ananya Verma (JNEC Desk 1)"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">
+          📷 Reporting Desk 1 (JNEC Counter)
+        </button>
+        <button class="btn btn-secondary role-switch-btn" data-role="REPORTING" data-username="desk2"
+          data-desk="DESK-02" data-fullname="Karthik Rao (CS & IT Desk 2)"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">
+          📷 Reporting Desk 2 (CS & IT Counter)
+        </button>
+        <button class="btn btn-secondary role-switch-btn" data-role="HELPDESK" data-username="helpdesk"
+          data-desk="HELP-DESK" data-fullname="Suresh Menon (Help Desk Controller)"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">
+          🔍 Help Desk & Manual Resolution
+        </button>
+        <button class="btn btn-secondary role-switch-btn" data-role="PRESTAGE" data-username="prestage"
+          data-desk="PRE-STAGE" data-fullname="Vikram Joshi (Pre-Stage Marshal)"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">
+          🚶 Pre-Stage Lineup Marshal Scanner
+        </button>
+        <button class="btn btn-secondary role-switch-btn" data-role="STAGECONTROL" data-username="stage"
+          data-desk="STAGE-CTRL" data-fullname="Meera Nambiar (Stage Controller)"
+          onclick="document.getElementById('role-switcher-modal').style.display='none'">
+          🎬 Stage Controller Backstage Master
+        </button>
+        <button class="btn btn-primary role-switch-btn" data-role="ADMIN" data-username="admin"
+          data-fullname="Public LED"
+          onclick="window.app.switchView('display'); document.getElementById('role-switcher-modal').style.display='none'">
+          🖥️ 16:9 Public Stage LED Screen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-Side Scripts -->
+  <script src="/js/audio.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/reporting.js"></script>
+  <script src="/js/helpdesk.js"></script>
+  <script src="/js/prestage.js"></script>
+  <script src="/js/stagecontrol.js"></script>
+  <script src="/js/display.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+
+</html>
