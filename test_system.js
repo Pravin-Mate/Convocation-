@@ -172,6 +172,34 @@ async function runTests() {
   const csvText = await res12.text();
   assert(res12.status === 200 && csvText.includes('Student Name'), `Report generation exported valid CSV data`);
 
+  // Test 13: Bulk QR Code ZIP Generator
+  const res13 = await fetch('http://localhost:3000/api/qr/bulk-zip?naming=prn');
+  const zipBuf = await res13.arrayBuffer();
+  assert(res13.status === 200 && (res13.headers.get('content-type') || '').includes('application/zip') && zipBuf.byteLength > 20000, `Bulk QR Code Generator generated valid ZIP archive containing PRN-named QR images (${zipBuf.byteLength} bytes)`);
+
+  // Test 14: Single Student ID Card Backside PNG endpoint with automatic QR
+  const sampleStudent = get('SELECT prn_reg_id FROM students WHERE sequence_no = 1');
+  const res14 = await fetch(`http://localhost:3000/api/qr/id-card-back/${sampleStudent.prn_reg_id}`);
+  const backPngBuf = await res14.arrayBuffer();
+  const backPngBytes = new Uint8Array(backPngBuf);
+  // PNG signature is 0x89 0x50 0x4E 0x47
+  const isPngValid = backPngBytes[0] === 0x89 && backPngBytes[1] === 0x50 && backPngBytes[2] === 0x4E && backPngBytes[3] === 0x47;
+  assert(res14.status === 200 && isPngValid && backPngBuf.byteLength > 5000, `ID Card Backside PNG generated automatically for PRN ${sampleStudent.prn_reg_id} (${backPngBuf.byteLength} bytes)`);
+
+  // Test 15: Single Student Dual-Sided ID Card PNG endpoint
+  const res15 = await fetch(`http://localhost:3000/api/qr/id-card-two-sided/${sampleStudent.prn_reg_id}`);
+  const dualPngBuf = await res15.arrayBuffer();
+  assert(res15.status === 200 && dualPngBuf.byteLength > 10000, `Dual-Sided ID Card PNG generated automatically for PRN ${sampleStudent.prn_reg_id} (${dualPngBuf.byteLength} bytes)`);
+
+  // Test 16: Bulk ZIP containing ID Card Backsides with QR added automatically by PRN
+  const JSZip = (await import('jszip')).default;
+  const res16 = await fetch('http://localhost:3000/api/qr/bulk-zip?naming=prn&exportType=all&includeIdCardBacks=true');
+  const fullZipBuf = await res16.arrayBuffer();
+  const loadedZip = await JSZip.loadAsync(fullZipBuf);
+  const hasQrFile = Boolean(loadedZip.file(`qr_codes/${sampleStudent.prn_reg_id}.png`));
+  const hasBacksideFile = Boolean(loadedZip.file(`id_card_backsides/${sampleStudent.prn_reg_id}_backside.png`));
+  assert(res16.status === 200 && hasQrFile && hasBacksideFile, `Bulk ZIP contains both individual QR and ID Card backside automatically mapped to PRN ${sampleStudent.prn_reg_id}`);
+
   console.log('====================================================');
   console.log(`🎯 TEST SUMMARY: ${passedTests} / ${totalTests} TESTS PASSED (100%)`);
   console.log('====================================================');

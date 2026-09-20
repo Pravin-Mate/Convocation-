@@ -48,6 +48,16 @@ class StageController {
         e.preventDefault();
         this.emergencyHold();
       }
+      // 'P' -> PREVIOUS
+      else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        this.previous();
+      }
+      // 'C' -> COMPLETE / CONFER
+      else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        this.complete();
+      }
       // 'S' -> SKIP NEXT
       else if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
@@ -109,6 +119,46 @@ class StageController {
     }
   }
 
+  async previous() {
+    try {
+      const operatorId = window.app.currentUser.id || 1;
+      const res = await fetch('/api/stage/previous', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operatorId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.soundFX?.playStageTone();
+        window.app.showToast(data.message || 'Recalled previous student to stage', 'info');
+      } else {
+        window.app.showToast(data.error || 'Cannot recall previous', 'warning');
+      }
+    } catch (e) {
+      console.error('Previous error:', e);
+    }
+  }
+
+  async complete() {
+    try {
+      const operatorId = window.app.currentUser.id || 1;
+      const res = await fetch('/api/stage/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operatorId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.soundFX?.playSuccess();
+        window.app.showToast(data.message || 'Degree conferred! LED set to Holding Screen.', 'success');
+      } else {
+        window.app.showToast(data.error || 'No student active on stage', 'warning');
+      }
+    } catch (e) {
+      console.error('Complete error:', e);
+    }
+  }
+
   openSkipModal() {
     if (!this.nextStudent && !this.currentStudent) {
       window.app.showToast('No student to skip in queue', 'warning');
@@ -116,11 +166,45 @@ class StageController {
     }
 
     const target = this.nextStudent || this.currentStudent;
-    const reason = prompt(`Skip Student #${target.sequence_no} (${target.student_name})?\nEnter Reason:`, 'Absent from stage queue / Left line');
-    
-    if (reason !== null) {
-      this.executeSkip(target.student_id, reason);
+    this.targetSkipStudent = target;
+
+    const modal = document.getElementById('stage-skip-modal');
+    const info = document.getElementById('stage-skip-target-info');
+    if (modal && info) {
+      info.innerHTML = `
+        <div style="font-weight: 800; color: #fff; font-size: 1.1rem;">${target.student_name}</div>
+        <div style="color: var(--gold); font-size: 0.85rem; margin-top: 2px;">Seq #${target.sequence_no} • PRN: ${target.prn_reg_id || 'N/A'}</div>
+        <div style="color: #94a3b8; font-size: 0.8rem;">${target.programme_degree || ''}</div>
+      `;
+      const select = document.getElementById('stage-skip-reason-select');
+      const custom = document.getElementById('stage-skip-custom-reason');
+      if (select) select.value = 'Absent from stage line / Left queue';
+      if (custom) {
+        custom.style.display = 'none';
+        custom.value = '';
+      }
+      modal.style.display = 'flex';
+    } else {
+      // Fallback
+      const reason = prompt(`Skip Student #${target.sequence_no} (${target.student_name})?\nEnter Reason:`, 'Absent from stage queue / Left line');
+      if (reason !== null) {
+        this.executeSkip(target.student_id, reason);
+      }
     }
+  }
+
+  confirmSkip() {
+    if (!this.targetSkipStudent) return;
+    const select = document.getElementById('stage-skip-reason-select');
+    const custom = document.getElementById('stage-skip-custom-reason');
+    let reason = select?.value || 'Absent from stage queue / Left line';
+    if (reason === 'Custom') {
+      reason = custom?.value.trim() || 'Manual skip without specified reason';
+    }
+    const modal = document.getElementById('stage-skip-modal');
+    if (modal) modal.style.display = 'none';
+
+    this.executeSkip(this.targetSkipStudent.student_id, reason);
   }
 
   async executeSkip(studentId, reason) {
@@ -137,6 +221,91 @@ class StageController {
       }
     } catch (e) {
       console.error('Skip failed:', e);
+    }
+  }
+
+  openSearchJumpModal() {
+    const modal = document.getElementById('stage-search-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const input = document.getElementById('stage-search-input');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+      document.getElementById('stage-search-results').innerHTML = '<p style="text-align:center; color:#64748b; padding:1.5rem;">Enter sequence number, PRN, or student name to search.</p>';
+    }
+  }
+
+  async searchBackstage(term) {
+    if (!term || term.trim().length < 2) return;
+    const resultsContainer = document.getElementById('stage-search-results');
+    if (!resultsContainer) return;
+
+    try {
+      const res = await fetch(`/api/students?search=${encodeURIComponent(term.trim())}&limit=8`);
+      const data = await res.json();
+      if (data.success && data.students.length > 0) {
+        let html = '<div style="display:flex; flex-direction:column; gap:0.6rem;">';
+        data.students.forEach(s => {
+          html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+              <div>
+                <span class="pass-seq-tag" style="font-size:0.7rem;">SEQ #${s.sequence_no}</span>
+                <span style="font-weight:700; color:#fff; margin-left:0.4rem;">${s.student_name}</span>
+                <div style="font-size:0.78rem; color:#94a3b8;">${s.prn_reg_id} • ${s.programme_degree}</div>
+              </div>
+              <div style="display:flex; gap:0.4rem;">
+                <button class="btn btn-primary" style="padding:0.35rem 0.65rem; font-size:0.75rem;" onclick="window.stageController.applyJump(${s.id}, 'DISPLAY_NOW')">▶ Display Now</button>
+                <button class="btn btn-secondary" style="padding:0.35rem 0.65rem; font-size:0.75rem;" onclick="window.stageController.applyJump(${s.id}, 'QUEUE_NEXT')">⏳ Queue Next</button>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        resultsContainer.innerHTML = html;
+      } else {
+        resultsContainer.innerHTML = '<p style="text-align:center; color:#ef4444; padding:1.5rem;">No matching student records found.</p>';
+      }
+    } catch (e) {
+      console.error('Search error:', e);
+    }
+  }
+
+  async applyJump(studentId, action) {
+    try {
+      const operatorId = window.app.currentUser.id || 1;
+      const res = await fetch('/api/stage/search-jump', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, action, operatorId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.soundFX?.playSuccess();
+        window.app.showToast(data.message, 'success');
+        document.getElementById('stage-search-modal').style.display = 'none';
+      }
+    } catch (e) {
+      console.error('Jump failed:', e);
+    }
+  }
+
+  async removeFromQueue(queueId, studentId) {
+    if (!confirm('Remove student from stage lineup?')) return;
+    try {
+      const operatorId = window.app.currentUser.id || 1;
+      const res = await fetch('/api/stage/remove-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ queueId, studentId, operatorId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.app.showToast('Student removed from queue', 'info');
+      }
+    } catch (e) {
+      console.error('Remove error:', e);
     }
   }
 
@@ -248,7 +417,7 @@ class StageController {
     const queueTable = document.getElementById('stage-full-queue-tbody');
     if (queueTable) {
       if (this.fullQueue.length === 0) {
-        queueTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 1.5rem;">No students in waiting line</td></tr>`;
+        queueTable.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 1.5rem;">No students in waiting line</td></tr>`;
       } else {
         let html = '';
         this.fullQueue.forEach((s, idx) => {
@@ -258,6 +427,16 @@ class StageController {
               <td style="font-weight: 700;">Seq #${s.sequence_no}</td>
               <td style="font-weight: 600;">${s.student_name}</td>
               <td>${s.programme_degree}</td>
+              <td>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button class="btn btn-primary" style="padding: 0.25rem 0.55rem; font-size: 0.72rem;" onclick="window.stageController.applyJump(${s.student_id}, 'DISPLAY_NOW')" title="Display Directly on Stage">
+                    ▶ Show Now
+                  </button>
+                  <button class="btn btn-danger" style="padding: 0.25rem 0.55rem; font-size: 0.72rem;" onclick="window.stageController.removeFromQueue(${s.id}, ${s.student_id})" title="Remove from waiting lineup">
+                    ✕
+                  </button>
+                </div>
+              </td>
             </tr>
           `;
         });

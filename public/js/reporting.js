@@ -35,6 +35,20 @@ class ReportingController {
 
     // Clear and reset preview on initial load
     this.renderInitialState();
+
+    const deskSelect = document.getElementById('reporting-desk-select');
+    if (deskSelect && window.app?.currentUser?.desk_id) {
+      deskSelect.value = window.app.currentUser.desk_id;
+    }
+  }
+
+  onDeskChange(newDesk) {
+    if (window.app?.currentUser) {
+      window.app.currentUser.desk_id = newDesk;
+      window.app.updateUserBadge();
+    }
+    window.app.showToast(`Scanner counter set to ${newDesk}`, 'info');
+    this.focusInput();
   }
 
   async toggleCameraScanner() {

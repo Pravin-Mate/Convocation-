@@ -4,7 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MGM University - Convocation Reporting, Attendance & Live Stage Display System</title>
+  <title>MGM University Convocation System</title>
+  <meta name="description" content="Convocation QR reporting, attendance tracking, and live stage display system">
+  <meta property="og:title" content="MGM University Convocation System">
+  <meta property="og:description" content="Convocation QR reporting, attendance tracking, and live stage display system">
 
   <!-- Favicon / Tab Logo -->
   <link rel="icon" type="image/png" href="/assets/images/LogoMGM.png">
@@ -74,6 +77,29 @@
     <!-- 1. LIVE OPERATIONAL DASHBOARD                             -->
     <!-- ========================================================= -->
     <section id="view-dashboard" class="view-section active">
+      <!-- School / Programme Filter Ribbon -->
+      <div class="card" style="margin-bottom: 1.25rem; padding: 0.75rem 1.25rem; background: #0f172a; border: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+          <span style="font-weight: 700; color: var(--gold); font-size: 0.85rem;">📊 Filter Analytics:</span>
+          <div style="flex: 1; min-width: 200px;">
+            <select id="dash-filter-school" class="form-control" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;"
+              onchange="window.dashboardController.onFilterChange(this.value, undefined)">
+              <option value="ALL">All Schools / Institutes</option>
+            </select>
+          </div>
+          <div style="flex: 1; min-width: 200px;">
+            <select id="dash-filter-programme" class="form-control" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;"
+              onchange="window.dashboardController.onFilterChange(undefined, this.value)">
+              <option value="ALL">All Programmes / Degrees</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;"
+            onclick="document.getElementById('dash-filter-school').value='ALL'; document.getElementById('dash-filter-programme').value='ALL'; window.dashboardController.onFilterChange('ALL', 'ALL')">
+            ↺ Reset Filters
+          </button>
+        </div>
+      </div>
+
       <!-- High-Level Metrics -->
       <div class="metrics-grid">
         <div class="metric-card gold">
@@ -207,12 +233,34 @@
 
               <div
                 style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
-                <span style="font-size: 0.85rem; font-weight: 600; color: #fbbf24;">6. Exceptions & Audit Log</span>
+                <span style="font-size: 0.85rem; font-weight: 600; color: #fbbf24;">6. Exceptions Log</span>
                 <div>
                   <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
                     onclick="window.dashboardController.downloadReport('exceptions', 'csv')">CSV</button>
                   <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
                     onclick="window.dashboardController.downloadReport('exceptions', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #f97316;">7. Late Arrivals List</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('late', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('late', 'xlsx')">XLSX</button>
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 0.6rem 0.85rem; border-radius: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">8. Full Audit Trail</span>
+                <div>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('audit', 'csv')">CSV</button>
+                  <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                    onclick="window.dashboardController.downloadReport('audit', 'xlsx')">XLSX</button>
                 </div>
               </div>
             </div>
@@ -239,8 +287,18 @@
         <!-- Giant Scan Box Card -->
         <div class="scan-input-card focused">
           <div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span class="role-tag" style="background: var(--gold); color: #000;">HIGH-SPEED SCANNER</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="role-tag" style="background: var(--gold); color: #000; font-weight: 800;">HIGH-SPEED SCANNER</span>
+                <select id="reporting-desk-select" class="form-control" style="width: auto; font-size: 0.8rem; padding: 0.25rem 0.6rem;"
+                  onchange="window.reportingController.onDeskChange(this.value)">
+                  <option value="DESK-01">Counter DESK-01 (JNEC Counter)</option>
+                  <option value="DESK-02">Counter DESK-02 (CS & IT Counter)</option>
+                  <option value="DESK-03">Counter DESK-03 (Management Counter)</option>
+                  <option value="DESK-04">Counter DESK-04 (Biosciences Counter)</option>
+                  <option value="DESK-05">Counter DESK-05 (Journalism Counter)</option>
+                </select>
+              </div>
               <button class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.78rem;"
                 onclick="window.reportingController.toggleCameraScanner()">
                 📷 Camera QR Scan
@@ -397,17 +455,29 @@
           </div>
 
           <!-- Master Control Action Buttons with Hotkeys -->
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button class="btn btn-giant btn-primary" onclick="window.stageController.displayNext()">
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-giant btn-primary" onclick="window.stageController.displayNext()" title="Display Next Student (Spacebar)">
               ▶ DISPLAY NEXT <span class="hotkey-badge">SPACE</span>
             </button>
-            <button class="btn btn-danger" style="padding: 0.85rem 1.5rem; font-weight: 800;"
-              onclick="window.stageController.emergencyHold()">
-              ⏹ HOLD / HOME <span class="hotkey-badge">H</span>
+            <button class="btn btn-secondary" style="padding: 0.85rem 1.1rem; font-weight: 700; border-color: #38bdf8; color: #38bdf8;"
+              onclick="window.stageController.previous()" title="Recall Previous Student (P)">
+              ⏮ PREV <span class="hotkey-badge">P</span>
             </button>
-            <button class="btn btn-secondary" style="padding: 0.85rem 1.25rem;"
-              onclick="window.stageController.openSkipModal()">
+            <button class="btn btn-success" style="padding: 0.85rem 1.1rem; font-weight: 700;"
+              onclick="window.stageController.complete()" title="Conclude Conferral & Return to Holding (C)">
+              ✓ CONFER <span class="hotkey-badge">C</span>
+            </button>
+            <button class="btn btn-danger" style="padding: 0.85rem 1.25rem; font-weight: 800;"
+              onclick="window.stageController.emergencyHold()" title="Emergency Blank / Holding Screen (H)">
+              ⏹ HOLD <span class="hotkey-badge">H</span>
+            </button>
+            <button class="btn btn-secondary" style="padding: 0.85rem 1.1rem;"
+              onclick="window.stageController.openSkipModal()" title="Skip Student (S)">
               ⏭ SKIP <span class="hotkey-badge">S</span>
+            </button>
+            <button class="btn btn-secondary" style="padding: 0.85rem 1.1rem; border-color: var(--gold); color: #fef08a;"
+              onclick="window.stageController.openSearchJumpModal()" title="Search & Manual Jump">
+              🔍 SEARCH / JUMP
             </button>
           </div>
         </div>
@@ -441,6 +511,7 @@
                 <th>Convocation Seq #</th>
                 <th>Student Name</th>
                 <th>Degree & Discipline</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="stage-full-queue-tbody">
@@ -452,22 +523,70 @@
     </section>
 
     <!-- ========================================================= -->
-    <!-- 6. QR PASS STUDIO & BATCH PRINT                           -->
+    <!-- 6. QR PASS & STUDENT ID CARD STUDIO                         -->
     <!-- ========================================================= -->
     <section id="view-passes" class="view-section">
       <div class="card no-print" style="margin-bottom: 1.5rem;">
-        <div class="card-header">
-          <h2 class="card-title">🖨️ Official MGM University QR Pass Studio</h2>
+        <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <button class="btn btn-primary" onclick="window.adminController.printAllPasses()">
-              🖨️ Print All Passes (A4 Layout)
+            <h2 class="card-title" style="margin-bottom: 0.25rem;">🖨️ Official MGM Convocation ID Card & Pass Studio</h2>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
+              Student ID cards featuring <strong>automatic backside QR code placement according to PRN No</strong>, front credentials, and ceremony security tokens.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-warning" id="btn-bulk-qr-generator" onclick="window.adminController.openBulkQrModal()"
+              style="font-weight: 700; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; border: 1px solid #f59e0b;">
+              📦 Bulk QR & ID Card Generator (ZIP)
+            </button>
+            <button class="btn btn-secondary" onclick="window.adminController.generateMissingTokens()">
+              🔐 Generate Missing Tokens
+            </button>
+            <button class="btn btn-primary" onclick="window.adminController.printCurrentPassView()">
+              🖨️ Print Active View (A4 Layout)
             </button>
           </div>
         </div>
-        <p style="color: var(--text-secondary); font-size: 0.88rem;">
-          Clean, printable student passes featuring opaque security QR codes, student details, and convocation sequence
-          badges.
-        </p>
+
+        <!-- Mode & Layout Selector -->
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <span style="font-size: 0.82rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Display Format:</span>
+            <div class="btn-group" style="display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 3px; border: 1px solid rgba(255,255,255,0.1);">
+              <button id="btn-mode-dual" class="btn btn-sm active" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem;" onclick="window.adminController.setPassViewMode('two_sided')">
+                🪪 Dual-Sided ID Cards (Front + Back QR)
+              </button>
+              <button id="btn-mode-back" class="btn btn-sm" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem;" onclick="window.adminController.setPassViewMode('backside')">
+                📄 ID Card Backside Only (QR Focus)
+              </button>
+              <button id="btn-mode-standard" class="btn btn-sm" style="font-weight: 700; border-radius: 6px; padding: 0.35rem 0.75rem;" onclick="window.adminController.setPassViewMode('standard')">
+                🎫 Landscape Pass
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-sm btn-outline-light" onclick="window.adminController.printBacksidesOnly()" title="Print only the backside with QR for student ID card reverse printing">
+              🖨️ Print Backsides Only
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Pass Search Filter -->
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; background: rgba(0,0,0,0.25); padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem;">
+          <input type="text" id="pass-search-input" class="form-control" style="flex: 2; min-width: 220px;"
+            placeholder="Search ID cards by Student Name or PRN..."
+            oninput="window.adminController.loadPasses(document.getElementById('pass-school-select')?.value, this.value)">
+          <select id="pass-school-select" class="form-control" style="flex: 1; min-width: 200px;"
+            onchange="window.adminController.loadPasses(this.value, document.getElementById('pass-search-input')?.value)">
+            <option value="">All Schools / Institutes</option>
+            <option value="Jawaharlal Nehru Engineering College (JNEC)">JNEC (Engineering)</option>
+            <option value="Dr. G.Y. Pathrikar College of CS & IT">CS & IT</option>
+            <option value="MGM Institute of Management & Research (IOMR)">IOMR (Management)</option>
+            <option value="MGM Institute of Bioscience & Technology (IBT)">IBT (Biosciences)</option>
+            <option value="MGM School of Film & Creative Arts">Film & Creative Arts</option>
+          </select>
+        </div>
       </div>
 
       <div id="printable-passes-grid" class="passes-grid">
@@ -646,6 +765,36 @@
           </div>
         </div>
 
+        <!-- Automated Historical Backups Archive -->
+        <div class="card" style="margin-bottom: 1.5rem; border-color: #d4af37;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3 class="card-title" style="color: #fef08a;">🗄️ Disaster Recovery Archive & Historical Snapshots</h3>
+              <p style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.25rem;">
+                Automated 15-minute ceremony snapshots and pre-reset safety archives.
+              </p>
+            </div>
+            <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;" onclick="window.adminController.loadBackupsList()">
+              🔄 Refresh Snapshots
+            </button>
+          </div>
+          <div class="table-responsive" style="max-height: 280px;">
+            <table class="custom-table" style="font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th>Snapshot Timestamp</th>
+                  <th>Filename</th>
+                  <th>Size</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-backups-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Rehearsal Reset Control -->
         <div class="card" style="border-color: #f43f5e; background: #1c0f16;">
           <div class="card-header">
@@ -655,7 +804,7 @@
             Reset all reporting records and stage queue events before the real ceremony begins. Student master database
             and QR tokens are safely preserved.
           </p>
-          <button class="btn btn-danger" onclick="window.adminController.resetCeremony()">
+          <button class="btn btn-danger" onclick="window.adminController.openResetModal()">
             ⚠️ Reset All Ceremony Transactions for Fresh Rehearsal
           </button>
         </div>
@@ -760,6 +909,242 @@
           data-fullname="Public LED"
           onclick="window.app.switchView('display'); document.getElementById('role-switcher-modal').style.display='none'">
           🖥️ 16:9 Public Stage LED Screen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage Search & Manual Jump Modal -->
+  <div id="stage-search-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center;"
+    onclick="if(event.target === this) this.style.display='none'">
+    <div class="card"
+      style="max-width: 650px; width: 92%; background: #0f172a; border: 2px solid var(--gold); border-radius: 16px; padding: 1.75rem; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <h3 class="card-title">🔍 Backstage Manual Search & Jump</h3>
+        <button style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"
+          onclick="document.getElementById('stage-search-modal').style.display='none'">&times;</button>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+        Search student by PRN, Sequence Number, or Name to directly display them on the LED stage slide or insert them next in queue.
+      </p>
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+        <input type="text" id="stage-search-input" class="form-control"
+          placeholder="Search by Seq #, PRN, or Student Name..."
+          oninput="window.stageController.searchBackstage(this.value)"
+          onkeydown="if(event.key==='Enter') window.stageController.searchBackstage(this.value)">
+        <button class="btn btn-primary" onclick="window.stageController.searchBackstage(document.getElementById('stage-search-input').value)">
+          Search
+        </button>
+      </div>
+      <div id="stage-search-results" style="overflow-y: auto; flex: 1; min-height: 200px;">
+        <p style="text-align: center; color: #64748b; padding: 1.5rem;">Enter sequence number, PRN, or student name to search.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage Skip Confirmation Modal -->
+  <div id="stage-skip-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center;"
+    onclick="if(event.target === this) this.style.display='none'">
+    <div class="card"
+      style="max-width: 500px; width: 92%; background: #18101a; border: 2px solid #f59e0b; border-radius: 16px; padding: 1.75rem;">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <h3 class="card-title" style="color: #fbbf24;">⏭️ Skip Student from Stage Queue</h3>
+        <button style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"
+          onclick="document.getElementById('stage-skip-modal').style.display='none'">&times;</button>
+      </div>
+      <div id="stage-skip-target-info" style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: 8px;">
+        <!-- Target student details -->
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="font-weight: 700;">Mandatory Skip Reason *</label>
+        <select id="stage-skip-reason-select" class="form-control" style="margin-bottom: 0.75rem;"
+          onchange="document.getElementById('stage-skip-custom-reason').style.display = this.value === 'Custom' ? 'block' : 'none'">
+          <option value="Absent from stage line / Left queue">Absent from stage line / Left queue</option>
+          <option value="Unreported / Missing attendance check">Unreported / Missing attendance check</option>
+          <option value="Gown / Attire adjustment required">Gown / Attire adjustment required</option>
+          <option value="Dignitary protocol realignment">Dignitary protocol realignment</option>
+          <option value="Custom">Custom Reason...</option>
+        </select>
+        <input type="text" id="stage-skip-custom-reason" class="form-control" placeholder="Type reason here..." style="display: none;">
+      </div>
+      <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-secondary" style="flex: 1;"
+          onclick="document.getElementById('stage-skip-modal').style.display='none'">
+          Cancel
+        </button>
+        <button class="btn btn-danger" style="flex: 1; font-weight: 700;"
+          onclick="window.stageController.confirmSkip()">
+          Confirm Skip (Log Exception)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ceremony Reset Confirmation Modal -->
+  <div id="admin-reset-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center;"
+    onclick="if(event.target === this) this.style.display='none'">
+    <div class="card"
+      style="max-width: 520px; width: 92%; background: #1e1014; border: 2px solid #ef4444; border-radius: 16px; padding: 1.75rem;">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <h3 class="card-title" style="color: #f87171;">⚠️ Reset Ceremony Transactions</h3>
+        <button style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"
+          onclick="document.getElementById('admin-reset-modal').style.display='none'">&times;</button>
+      </div>
+      <p style="color: #cbd5e1; font-size: 0.88rem; margin-bottom: 1rem;">
+        This action resets all <strong>Reporting Scans</strong>, <strong>Pre-Stage Queues</strong>, and <strong>Conferred Degrees</strong> for rehearsal testing.
+      </p>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.25rem; font-size: 0.82rem; color: #94a3b8;">
+        🛡️ An automatic safety database backup snapshot will be saved automatically prior to reset.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type <code>RESET_LIVE_CEREMONY</code> to confirm:</label>
+        <input type="text" id="admin-reset-input" class="form-control" placeholder="RESET_LIVE_CEREMONY" autocomplete="off">
+      </div>
+      <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" style="flex: 1;"
+          onclick="document.getElementById('admin-reset-modal').style.display='none'">
+          Cancel
+        </button>
+        <button class="btn btn-danger" style="flex: 1; font-weight: 700;"
+          onclick="window.adminController.confirmResetCeremony()">
+          Execute Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk QR Code Generator Modal -->
+  <div id="bulk-qr-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center;"
+    onclick="if(event.target === this) this.style.display='none'">
+    <div class="card"
+      style="max-width: 560px; width: 92%; background: #111a2e; border: 2px solid #f59e0b; border-radius: 16px; padding: 1.75rem; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+      <div class="card-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.75rem;">
+        <h3 class="card-title" style="color: #fbbf24; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+          <span>📦</span> Bulk QR & Student ID Card Generator
+        </h3>
+        <button style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"
+          onclick="document.getElementById('bulk-qr-modal').style.display='none'">&times;</button>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1rem;">
+        Generates individual QR code images and <strong>automatically places each QR code onto the backside of student ID cards</strong> strictly mapped to their <strong>PRN Number</strong>. Packaged into an organized ZIP archive.
+      </p>
+
+      <!-- Automated ID Card Feature Highlight Box -->
+      <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span style="font-size: 1.1rem;">🪪</span>
+          <strong style="color: #fbbf24; font-size: 0.85rem;">Automatic ID Card Backside Stamping</strong>
+        </div>
+        <p style="font-size: 0.78rem; color: #e2e8f0; margin: 0; line-height: 1.4;">
+          The system will automatically generate high-resolution ID card backsides with student details (PRN, Name, Stage Seq #) and the exact matching scannable security QR code.
+        </p>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label" style="font-weight: 700; color: #f1f5f9;">1. Target Student Scope</label>
+        <select id="bulk-qr-scope" class="form-control" onchange="window.adminController.updateBulkQrCountPreview()">
+          <option value="all">All Active Students in Master (Entire Convocation Batch)</option>
+          <option value="filtered">Currently Filtered View Only</option>
+        </select>
+        <div id="bulk-qr-count-preview" style="font-size: 0.8rem; color: #38bdf8; margin-top: 0.35rem; font-weight: 600;">
+          Target: 100 Students
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label" style="font-weight: 700; color: #f1f5f9;">2. Archive Contents / Output Mode</label>
+        <select id="bulk-qr-export-type" class="form-control">
+          <option value="all">⭐ Complete Package: Standalone QRs ([PRN].png) + ID Card Backsides with QR ([PRN]_backside.png) + Manifest</option>
+          <option value="id_cards_back">🪪 ID Card Backsides with QR only ([PRN]_backside.png) - Direct ID Reverse Printing</option>
+          <option value="two_sided">📄 Full Two-Sided ID Cards ([PRN]_id_card.png) - Front & Back Side-by-Side</option>
+          <option value="qr_only">📦 Standalone QR Code Images only ([PRN].png)</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label" style="font-weight: 700; color: #f1f5f9;">3. Filename Indexing Format</label>
+        <select id="bulk-qr-naming" class="form-control">
+          <option value="prn">[PRN].png &nbsp;&nbsp;(e.g. 202601001_backside.png - Recommended for ID badges & automation)</option>
+          <option value="prn_prefix">PRN_[PRN].png &nbsp;&nbsp;(e.g. PRN_202601001_backside.png)</option>
+          <option value="prn_name">[PRN]_[Student_Name].png &nbsp;&nbsp;(e.g. 202601001_Dev_Banerjee_backside.png)</option>
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; color: #f1f5f9;">4. Image Resolution</label>
+          <select id="bulk-qr-resolution" class="form-control">
+            <option value="600">600 x 600 px (300 DPI Ultra HD)</option>
+            <option value="400">400 x 400 px (Standard Web/Print)</option>
+            <option value="800">800 x 800 px (Maximum Print Crispness)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; color: #f1f5f9;">5. Security Standard</label>
+          <input type="text" class="form-control" value="Cryptographic Opaque Token" disabled style="opacity: 0.8; font-size: 0.8rem; background: rgba(0,0,0,0.3);">
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem;">
+        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; margin: 0; font-size: 0.85rem; color: #e2e8f0;">
+          <input type="checkbox" id="bulk-include-id-card-back" checked style="accent-color: #f59e0b; width: 16px; height: 16px;">
+          <span>Automatically add generated QR onto <strong>Backside of student ID Card</strong> according to PRN No</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; margin: 0; font-size: 0.85rem; color: #e2e8f0;">
+          <input type="checkbox" id="bulk-qr-manifest-check" checked style="accent-color: #f59e0b; width: 16px; height: 16px;">
+          <span>Include <strong>Distribution Manifest CSV</strong> & README distribution guide inside ZIP</span>
+        </label>
+      </div>
+
+      <!-- Live Generation Status / Progress Alert -->
+      <div id="bulk-qr-status-box" style="display: none; padding: 0.85rem; border-radius: 8px; margin-bottom: 1.25rem; font-size: 0.85rem;">
+        <!-- Status rendered here -->
+      </div>
+
+      <div style="display: flex; gap: 0.75rem;">
+        <button type="button" class="btn btn-secondary" style="flex: 1;"
+          onclick="document.getElementById('bulk-qr-modal').style.display='none'">
+          Cancel
+        </button>
+        <button type="button" id="btn-submit-bulk-qr" class="btn btn-warning" style="flex: 2; font-weight: 700; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; border: 1px solid #f59e0b;"
+          onclick="window.adminController.generateBulkQrZip()">
+          📦 Generate & Download ZIP
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operator Password Modal -->
+  <div id="admin-password-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center;"
+    onclick="if(event.target === this) this.style.display='none'">
+    <div class="card"
+      style="max-width: 450px; width: 92%; background: #131b2e; border: 2px solid var(--gold); border-radius: 16px; padding: 1.75rem;">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <h3 class="card-title">🔑 Change Operator Password</h3>
+        <button style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"
+          onclick="document.getElementById('admin-password-modal').style.display='none'">&times;</button>
+      </div>
+      <p id="admin-password-user-label" style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+        Updating password
+      </p>
+      <div class="form-group">
+        <label class="form-label">New Password (Min 6 chars)</label>
+        <input type="password" id="admin-new-password-input" class="form-control" value="mgm2026">
+      </div>
+      <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" style="flex: 1;"
+          onclick="document.getElementById('admin-password-modal').style.display='none'">
+          Cancel
+        </button>
+        <button class="btn btn-primary" style="flex: 1;"
+          onclick="window.adminController.submitPasswordChange()">
+          Save Password
         </button>
       </div>
     </div>

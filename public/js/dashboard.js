@@ -3,6 +3,8 @@
 class DashboardController {
   constructor() {
     this.stats = null;
+    this.selectedSchool = 'ALL';
+    this.selectedProgramme = 'ALL';
   }
 
   init() {
@@ -10,8 +12,13 @@ class DashboardController {
 
     if (window.app.socket) {
       window.app.socket.on('stats:update', (newStats) => {
-        this.stats = newStats;
-        this.render();
+        // If we are filtered, reload with our filter query
+        if (this.selectedSchool !== 'ALL' || this.selectedProgramme !== 'ALL') {
+          this.loadStats();
+        } else {
+          this.stats = newStats;
+          this.render();
+        }
       });
     }
 
@@ -25,7 +32,19 @@ class DashboardController {
 
   async loadStats() {
     try {
-      const res = await fetch('/api/dashboard/stats');
+      let url = '/api/dashboard/stats';
+      const params = [];
+      if (this.selectedSchool && this.selectedSchool !== 'ALL') {
+        params.push(`school=${encodeURIComponent(this.selectedSchool)}`);
+      }
+      if (this.selectedProgramme && this.selectedProgramme !== 'ALL') {
+        params.push(`programme=${encodeURIComponent(this.selectedProgramme)}`);
+      }
+      if (params.length > 0) {
+        url += '?' + params.join('&');
+      }
+
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         this.stats = data.stats;
@@ -36,17 +55,56 @@ class DashboardController {
     }
   }
 
+  onFilterChange(school, programme) {
+    if (school !== undefined) this.selectedSchool = school;
+    if (programme !== undefined) this.selectedProgramme = programme;
+    this.loadStats();
+  }
+
+  populateFilterDropdowns() {
+    const schoolSelect = document.getElementById('dash-filter-school');
+    const programmeSelect = document.getElementById('dash-filter-programme');
+
+    if (schoolSelect && this.stats?.distinctSchools) {
+      const current = this.selectedSchool;
+      let html = '<option value="ALL">All Schools / Institutes</option>';
+      this.stats.distinctSchools.forEach(sch => {
+        html += `<option value="${sch}" ${sch === current ? 'selected' : ''}>${sch}</option>`;
+      });
+      schoolSelect.innerHTML = html;
+    }
+
+    if (programmeSelect && this.stats?.distinctProgrammes) {
+      const current = this.selectedProgramme;
+      let html = '<option value="ALL">All Programmes / Degrees</option>';
+      this.stats.distinctProgrammes.forEach(prg => {
+        html += `<option value="${prg}" ${prg === current ? 'selected' : ''}>${prg}</option>`;
+      });
+      programmeSelect.innerHTML = html;
+    }
+  }
+
   render() {
     if (!this.stats) return;
 
+    this.populateFilterDropdowns();
+
     // Metrics
-    document.getElementById('dash-total-registered').textContent = this.stats.totalRegistered;
-    document.getElementById('dash-total-reported').textContent = this.stats.reportedCount;
-    document.getElementById('dash-reported-pct').textContent = `${this.stats.reportingPercentage}% Reported`;
-    document.getElementById('dash-total-absent').textContent = this.stats.yetToReport;
-    document.getElementById('dash-total-late').textContent = this.stats.lateCount;
-    document.getElementById('dash-total-queued').textContent = this.stats.queuedCount;
-    document.getElementById('dash-total-conferred').textContent = this.stats.conferredCount;
+    const totalReg = document.getElementById('dash-total-registered');
+    const totalRep = document.getElementById('dash-total-reported');
+    const repPct = document.getElementById('dash-reported-pct');
+    const totalAbs = document.getElementById('dash-total-absent');
+    const totalLate = document.getElementById('dash-total-late');
+    const totalQue = document.getElementById('dash-total-queued');
+    const totalConf = document.getElementById('dash-total-conferred');
+
+    if (totalReg) totalReg.textContent = this.stats.totalRegistered;
+    if (totalRep) totalRep.textContent = this.stats.reportedCount;
+    if (repPct) repPct.textContent = `${this.stats.reportingPercentage}% Reported`;
+    if (totalAbs) totalAbs.textContent = this.stats.yetToReport;
+    if (totalLate) totalLate.textContent = this.stats.lateCount;
+    if (totalQue) totalQue.textContent = this.stats.queuedCount;
+    if (totalConf) totalConf.textContent = this.stats.conferredCount;
 
     // School Breakdown Table
     const schoolTbody = document.getElementById('dash-school-tbody');

@@ -1,0 +1,10 @@
+{
+  "name": "MGM University Convocation System",
+  "description": "Convocation QR reporting, attendance tracking, and live stage display system",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
